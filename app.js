@@ -416,6 +416,7 @@ function importData(){
   try{db.set(merged)}catch(e){alert('No se ha podido guardar la importación. Puede faltar espacio en el dispositivo. Los datos originales siguen en la sesión actual.');return}
   state=merged;
   MHSOffline?.saveState(state).catch(e=>console.warn('Copia IndexedDB no disponible',e));
+  MHSOffline?.enqueue('state_snapshot',syncPayload(),{dedupeKey:'state-main'}).catch(()=>{});
   toast('Datos añadidos sin sustituir los existentes');renderDashboard();
  }catch(e){alert('No se pudo importar el JSON: '+e.message)}};
  r.readAsText(f);
@@ -671,8 +672,27 @@ window.MHSApp={
  getState:()=>JSON.parse(JSON.stringify(state)),
  applyRemoteState:async(remote,{source='remote'}={})=>{
   if(!remote||!Array.isArray(remote.services))return false;
-  state=remote;
-  try{db.set(state)}catch(e){console.warn('No se pudo actualizar localStorage',e)}
+  // NO sustituir la copia local por el snapshot remoto: unir por ID, conservando el registro local
+  // salvo que el remoto tenga una fecha de actualización posterior.
+  const combined={...state};
+  for(const kind of ['services','clients','products','invoices','budgets']){
+    const local=Array.isArray(state[kind])?state[kind]:[];
+    const incoming=Array.isArray(remote[kind])?remote[kind]:[];
+    const byId=new Map(local.filter(x=>x&&x.id).map(x=>[String(x.id),x]));
+    for(const item of incoming){
+      if(!item||!item.id)continue;
+      const id=String(item.id),prev=byId.get(id);
+      if(!prev || (Date.parse(item.updatedAt||'')||0)>(Date.parse(prev.updatedAt||'')||0))byId.set(id,item);
+    }
+    combined[kind]=[...byId.values()];
+  }
+  const localCo=state.company||{},remoteCo=remote.company||{};
+  combined.company={...remoteCo,...Object.fromEntries(Object.entries(localCo).filter(([,v])=>v!==null&&v!==undefined&&v!==''))};
+  const maxUsed=combined.services.reduce((m,s)=>{const x=String(s.baseNumber||s.number||'').match(/(\d{3,})/);return x?Math.max(m,Number(x[1])||0):m},0);
+  combined.numbering={...(remote.numbering||{}),...(state.numbering||{}),serviceNext:Math.max(26001,Number(state.numbering?.serviceNext)||0,Number(remote.numbering?.serviceNext)||0,maxUsed+1)};
+  // Persistir lo recuperado, sin borrar datos de este dispositivo.
+  try{db.set(combined)}catch(e){alert('No se pudieron guardar los datos remotos. Exporta copia JSON.');return false}
+  state=combined;
   if(window.MHSOffline)await MHSOffline.saveState(state).catch(()=>{});
   renderDashboard();
   if(source==='cloudflare')toast('Datos actualizados desde Cloudflare');

@@ -39,10 +39,10 @@
     </aside>
     <section class="workspace">
       <header class="topbar no-print">
-        <div><strong>HMSARBIDE · trabajo local</strong><small>Servicios, documentación, facturación y certificados</small></div>
-        <div class="topactions"><button class="sync-status" id="syncStatusBtn" type="button" aria-label="Estado de sincronización"><span id="syncDot">●</span><span id="syncText">Preparando offline…</span></button><button class="btn ghost install-app-btn" id="installAppBtn" type="button" hidden>Instalar app</button><span class="pilot-chip">TRABAJO · LOCAL</span></div>
+        <div><strong>HMSARBIDE</strong><small>Servicios, documentación, facturación y certificados</small></div>
+        <div class="topactions"><button class="sync-status" id="syncStatusBtn" type="button" aria-label="Estado de sincronización"><span id="syncDot">●</span><span id="syncText">Preparando offline…</span></button><button class="btn ghost install-app-btn" id="installAppBtn" type="button" hidden>Instalar app</button><span class="pilot-chip">HMSARBIDE · COPIAS + NUBE</span></div>
       </header>
-      <div class="pilot-warning no-print">MODO LOCAL: esta versión publicada en GitHub Pages NO sincroniza con Supabase ni Cloudflare. Los clientes y documentos quedan en este navegador y dispositivo, NO en GitHub. Exporta una copia JSON desde «Empresa / copias» después de cada sesión. No borres los datos del navegador. Los clientes antiguos no aparecen automáticamente: hay que recuperarlos de una copia o instalación anterior.</div>
+      <div class="pilot-warning no-print">RECUPERACIÓN: importa tu copia JSON en Empresa / copias y guarda otra copia antes de sincronizar. Para conectar varios dispositivos pulsa Estado de sincronización y configura tu Worker Cloudflare existente. No se sincroniza automáticamente ni se reemplazan registros sin comprobar el servidor. GitHub aloja el programa, no los datos.</div>
       <main id="app"></main>
     </section>
   </div>
@@ -60,12 +60,39 @@
   <script src="piloto-documentos.js"></script>
   <script>
   (function(){
-    const btn=document.getElementById('syncStatusBtn');
-    const text=document.getElementById('syncText');
-    const dot=document.getElementById('syncDot');
-    if(text)text.textContent='Solo local · sin nube';
-    if(dot)dot.textContent='○';
-    if(btn){btn.title='Sincronización remota desactivada para proteger tus datos';btn.onclick=()=>alert('Esta versión guarda datos localmente. Exporta una copia JSON periódicamente en Empresa / copias.');}
+    const btn=document.getElementById('syncStatusBtn'),dot=document.getElementById('syncDot'),text=document.getElementById('syncText');
+    if(!btn||!window.MHSOffline)return;
+    const paint=st=>{
+      btn.classList.toggle('is-offline',!st.online);
+      btn.classList.toggle('has-pending',st.pending>0);
+      if(dot)dot.textContent=st.syncing?'↻':(st.online?'●':'○');
+      if(text)text.textContent=!st.online?'Sin conexión · guardado local':
+        !st.configured?'Sin servidor · configurar nube':
+        st.syncing?'Sincronizando…':`Cloudflare · ${st.pending} pendiente${st.pending===1?'':'s'}`;
+    };
+    MHSOffline.onStatus(paint);
+    btn.addEventListener('click',async()=>{
+      const st=await MHSOffline.getStatus();
+      if(!st.online){alert('Sin conexión. Puedes seguir guardando localmente y exportar JSON.');return;}
+      if(!st.configured){
+        const ep=prompt('URL HTTPS de TU Worker Cloudflare existente (no Supabase):','');
+        if(!ep)return;
+        const tk=prompt('Token privado del Worker (no clave de GitHub ni de Supabase):','');
+        if(!tk)return;
+        try{
+          // Verificar antes de guardar credenciales; no enviar datos ni descargarlos aún.
+          const r=await fetch(ep.trim().replace(/\/+$/,'')+'/health',{headers:{Authorization:'Bearer '+tk.trim()}});
+          if(!r.ok)throw new Error('HTTP '+r.status);
+          const health=await r.json();
+          if(health.service!=='mhs-v46-cloudflare')throw new Error('El servidor no identifica al Worker de HMSARBIDE');
+          MHSOffline.configure({endpoint:ep,token:tk});
+          alert('Servidor verificado. No se han enviado ni descargado datos. Exporta antes una copia JSON. Vuelve a pulsar el estado para sincronizar manualmente.');
+        }catch(e){alert('No se ha conectado: '+(e.message||e));}
+        return;
+      }
+      if(!confirm('¿Has guardado una copia JSON de esta aplicación? La sincronización intercambiará datos con Cloudflare y otros dispositivos. Continúa solo si reconoces ese servidor.'))return;
+      try{const r=await MHSOffline.syncNow();alert(`Sincronización ejecutada. Enviados: ${r.synced}. Pendientes: ${r.pending}. Revisa Clientes y hojas en los otros dispositivos.`)}catch(e){alert('Error de sincronización: '+(e.message||e))}
+    });
   })();
   </script>
 
@@ -99,7 +126,7 @@
   </script>
 
   <script>
-  // Sin sincronización remota automática en esta versión.
+  // Sin sincronización remota automática: activación manual por el usuario.
   </script>
 
 </body>

@@ -1,0 +1,25 @@
+HMSARBIDE — RECUPERACIÓN LOCAL — 17/11/2026
+
+Esta entrega procede de HMSARBIDE PREPUBLICACION V1. Conserva el ZIP original sin modificar.
+
+INICIO EN EL MAC
+1. Descomprime el ZIP en una carpeta estable que NO vayas a mover después.
+2. Abre INICIAR_HMSARBIDE.command. macOS puede exigir botón derecho > Abrir la primera vez.
+3. La app aparece en http://localhost:8765/. Conserva siempre esa dirección y el mismo navegador/perfil; NO uses incógnito para datos reales.
+4. Deja la ventana de Terminal abierta mientras utilizas la aplicación.
+5. Al terminar, en Empresa / copias pulsa Exportar copia JSON y conserva el fichero en un lugar separado.
+
+DATOS
+- Los datos se guardan LOCALMENTE en el navegador: NO hay nube, ni sincronización entre Mac/tablet/móvil.
+- NO borres datos del sitio o historial con limpieza de almacenamiento. No abras app desde file://.
+- La importación JSON añade registros con IDs nuevos sin borrar los existentes; la app descarga una copia antes de importar. Comprueba la copia descargada.
+- Los clientes reales anteriores NO están en este ZIP. Deben recuperarse por una copia JSON de origen o del dispositivo anterior, sin desinstalar esa app.
+- Las fotos/adjuntos guardados en IndexedDB no quedan necesariamente incluidos en el JSON. Exporta archivos relevantes aparte.
+
+FACTURACIÓN
+- Comprueba a mano los datos fiscales, la numeración de factura y los PDF antes de emitir. Esta aplicación NO ha superado una auditoría fiscal/regulatoria.
+- No se garantiza uso multipuesto, respaldo automático, acceso remoto ni recuperación ante fallo del navegador.
+
+SEGURIDAD
+- No copies claves secretas en archivos de esta app. La sincronización remota con Cloudflare/Supabase está desactivada intencionadamente.
+- No subas este ZIP a un servidor público con datos de clientes sin revisar privacidad y autenticación.

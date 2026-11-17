@@ -1,0 +1,16 @@
+HMSARBIDE – CORRECCIÓN PARA GITHUB PAGES
+
+Esta revisión restaura la posibilidad de conectar manualmente a Cloudflare Worker.
+
+IMPORTANTE:
+- El sitio GitHub Pages almacena el código, NO los datos.
+- Un servidor Worker + D1 + R2 operativo, URL y token privado siguen siendo necesarios para sincronización multidispositivo. No se incluyen ni se inventan.
+- NUNCA subir copias JSON, tokens, fotos de clientes o datos personales al repositorio público.
+- Abrir Empresa / copias y EXPORTAR JSON antes de conectar el servidor.
+- Estado de sincronización: clic para introducir URL del Worker y token; valida /health sin enviar información.
+- Segundo clic: confirma copia de seguridad y envía/recibe datos. No sincroniza automáticamente en segundo plano.
+- La primera instalación de cada dispositivo tendrá almacenamiento vacío hasta importar la copia JSON o sincronizar contra un Worker existente con datos.
+- El código Worker incluido corrige la fusión de clientes, facturas y productos en el servidor, pero SOLO tendrá efecto si se despliega en Cloudflare. No sobreescribir Worker remoto sin copia de su D1/R2 y comprobación.
+- Los registros eliminados en un dispositivo pueden reaparecer al fusionar: todavía no hay mecanismo de tombstones.
+- Las facturas y PDFs deben comprobarse con un caso de prueba antes de uso fiscal definitivo.
+- No ejecutar importaciones ni sincronización con datos reales hasta verificar copia y servidor.
