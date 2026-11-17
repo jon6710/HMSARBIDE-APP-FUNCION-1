@@ -1,0 +1,31 @@
+HMSARBIDE · EDICIÓN WEB LOCAL · 17/11/2026
+
+ARCHIVOS LISTOS PARA GITHUB PAGES
+- ZIP para subir al repositorio: descomprime y sube el CONTENIDO de la carpeta, no el ZIP en sí.
+- No sustituyas el repositorio HMSARBIDE antiguo: usa un repositorio nuevo e independiente, sin ramas extra.
+- En GitHub -> repositorio -> Settings -> Pages -> Deploy from a branch -> main -> /(root) -> Save.
+- Espera la dirección HTTPS que muestre GitHub Pages. No inventes ni reutilices enlaces antiguos.
+
+IMPORTANTE: LOS CLIENTES NO VAN EN ESTE ZIP NI SE PUBLICAN EN GITHUB.
+- Los datos del programa se guardan en ESTE NAVEGADOR Y DISPOSITIVO, no en GitHub.
+- No hay sincronización entre móvil, tablet y ordenador.
+- Para recuperar los 11 clientes y registros de la copia, usa Empresa / copias -> Importar copia JSON, eligiendo UNA SOLA copia: MHS-piloto-backup-2026-11-06.json.
+- Esa importación es LOCAL; no subas el JSON a GitHub, correo público ni Pages. Contiene datos personales y de empresa.
+- Antes de importar, descarga una copia JSON de lo que ya exista en este navegador. La propia aplicación intenta descargar una antes de importar.
+- Los ficheros JSON no recuperan necesariamente los adjuntos en IndexedDB.
+- No uses incógnito para datos reales. No borres datos del sitio, caché o almacenamiento del navegador.
+- Al terminar cada jornada pulsa Empresa / copias -> Exportar copia JSON y guarda la copia fuera del navegador.
+- No reemplace ninguna instalación anterior hasta que sus clientes estén protegidos.
+
+COMPROBACIONES REALIZADAS
+- Sintaxis de archivos JS (node --check): correcta.
+- Referencias a iconos y recursos estáticos incluidos: correctas.
+- Importación JSON actualizada para conservar registros existentes, completar campos de empresa vacíos y continuar numeración de servicios.
+- La ejecución de una prueba en Chromium no pudo verificarse en este entorno (acceso a páginas locales bloqueado).
+
+PENDIENTE ANTES DE USO PROFESIONAL Y FACTURACIÓN REAL
+- Prueba manual de cliente -> nueva hoja -> guardar -> cerrar/recargar -> generar/imprimir PDF.
+- Comprobar en la propia app los 11 clientes recuperados y sus fichas.
+- Revisar fiscalidad, numeración, datos de empresa, albaranes y firmas: esto NO equivale a certificación normativa.
+- Ninguna protección de acceso de usuarios: GitHub Pages publica la interfaz para cualquiera que conozca el enlace. Los datos NO están en el repositorio, pero quedan visibles localmente para quien use el mismo navegador/perfil.
+- No existe copia automática en la nube ni soporte de sincronización multi-dispositivo.
