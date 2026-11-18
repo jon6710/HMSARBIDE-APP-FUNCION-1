@@ -159,10 +159,10 @@ function decodeVersion(row){
 }
 // V6: contrastar dos lecturas independientes. Si una omite una fila, se bloquea
 // la publicación y se informa del ID exacto; nunca se considera nube compatible.
-async function fetchPaged(makeQuery,label){
+async function fetchPaged(makeQuery,label,orderColumn='created_at'){
  const rows=[];let page=0;
  while(true){
-  const {data,error}=await makeQuery().order('created_at',{ascending:true}).range(page*500,(page+1)*500-1);
+  const {data,error}=await makeQuery().order(orderColumn,{ascending:true}).range(page*500,(page+1)*500-1);
   if(error)throw Error('Fallo al leer '+label+': '+error.message);
   rows.push(...(data||[]));
   if(!data||data.length<500)break;
@@ -448,7 +448,7 @@ async function fetchLegacy(){
   }
  }
  const sheets=await fetchPaged(()=>sdk().from('service_sheets')
-  .select('id,user_id,data,updated_at').eq('user_id',sessionUser.id),'service_sheets antigua');
+  .select('id,user_id,data,updated_at').eq('user_id',sessionUser.id),'service_sheets antigua','updated_at');
  for(const row of sheets)result.services.push(legacySheet(row.data,row));
  return result;
 }
