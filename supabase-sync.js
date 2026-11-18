@@ -273,7 +273,8 @@ async function publish(){
    }
   }
   if(missingAttachments.length)throw Error('Hay '+missingAttachments.length+' archivos solo locales. Sin Supabase Storage comprobado no se publicara una copia incompleta.');
-  if(JSON.stringify(payload).length>3500000)throw Error('La copia supera el tamaño de prueba (3,5 MB); exporta JSON y revisa fotografías antes de sincronizar.');
+  // Sin límite artificial de 3,5 MB: el servidor valida el tamaño real de la petición.
+  // IndexedDB conserva la copia local incluso si Supabase rechaza una petición grande.
   const {error}=await sdk().from('app_data').insert({user_id:sessionUser.id,data_type:NS,record_id:toSend.id,data:payload});
   if(error)throw error;
   // Solo reconocer el envío tras comprobar contenido y estructura de la fila recuperada.

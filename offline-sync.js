@@ -48,7 +48,18 @@ async function storeBlob(blob,meta={}){
   return id;
 }
 async function getBlob(id){if(!id)return null;const s=await tx(B);return req(s.get(id));}
-async function saveState(value){const s=await tx(S,'readwrite');await req(s.put({id:'main',value,updatedAt:new Date().toISOString()}));}
+async function saveState(value){
+  // La operación solo se da por guardada cuando toda la transacción se confirma.
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const transaction=db.transaction(S,'readwrite');
+    transaction.objectStore(S).put({id:'main',value,updatedAt:new Date().toISOString()});
+    transaction.oncomplete=()=>resolve(true);
+    transaction.onerror=()=>reject(transaction.error||new Error('No se pudo guardar IndexedDB'));
+    transaction.onabort=()=>reject(transaction.error||new Error('Guardado cancelado por el navegador'));
+  });
+}
+
 async function loadState(){const s=await tx(S);const rec=await req(s.get('main'));return rec?.value||null;}
 async function deleteBlob(id){if(!id)return;const s=await tx(B,'readwrite');return req(s.delete(id));}
 async function setStatus(id,status,lastError=''){const s=await tx(Q,'readwrite');const item=await req(s.get(id));if(!item)return;item.status=status;item.lastError=lastError;item.updatedAt=new Date().toISOString();if(status==='pending')item.tries=(item.tries||0)+1;await req(s.put(item));}

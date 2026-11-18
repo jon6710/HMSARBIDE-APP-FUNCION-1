@@ -591,6 +591,11 @@ printDoc=function(title,body){const c=state.company||{},w=window.open('','_blank
 // Completar la lectura durable ANTES de solicitar cualquier descarga de Supabase.
 // Si hay divergencia entre localStorage e IndexedDB, priorizar IndexedDB (persistencia principal).
 const localReady=(async()=>{
+ // Solicitar almacenamiento persistente cuando el navegador lo admita.
+ // No incrementa artificialmente la cuota ni impide iniciar sesión si es denegado.
+ if(navigator.storage?.persist){
+  try{await navigator.storage.persist()}catch(e){console.warn('Persistencia opcional no concedida',e)}
+ }
  if(!window.MHSOffline?.loadState)return;
  const saved=await MHSOffline.loadState();
  if(saved&&Array.isArray(saved.services)){

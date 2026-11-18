@@ -1,0 +1,10 @@
+HMSARBIDE V54.15 - Defecto 2: almacenamiento
+
+- Se elimina exclusivamente el límite artificial de 3,5 MB del envío de versiones.
+- IndexedDB sigue siendo el almacenamiento principal del estado y blobs.
+- La escritura de estados en IndexedDB confirma el fin de la transacción.
+- Se solicita almacenamiento persistente si el navegador lo permite. No es ilimitado.
+- Se conserva la corrección del defecto 1 (acceso sin menús superpuestos).
+- NO se ha comprobado la recuperación real contra Supabase.
+- Supabase puede rechazar datos grandes por sus límites propios; fotos y adjuntos requieren Supabase Storage para sincronizarse completamente.
+- NO subir JSON con clientes a repositorios públicos.
