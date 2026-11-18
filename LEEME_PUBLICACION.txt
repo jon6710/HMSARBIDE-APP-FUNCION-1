@@ -1,0 +1,10 @@
+HMSARBIDE — GitHub + Supabase (revisión sobre archivos recibidos)
+
+Antes de publicar: NO subir copias JSON con clientes ni credenciales privadas.
+La conexión al proyecto Supabase se inicia en «Supabase · conectar».
+Esta revisión no ha sido probada con la cuenta real de Supabase.
+IMPORTANTE: el historial hmsarbide_sync_piloto_v1 NO lee ni migra automáticamente
+las filas históricas clients/config/products de app_data ni service_sheets.
+No importar copias ni enviar datos reales sin respaldos y verificación previa.
+Las fotografías y adjuntos guardados en IndexedDB requieren validación independiente.
+El repositorio GitHub y el proyecto Supabase existentes no han sido alterados.

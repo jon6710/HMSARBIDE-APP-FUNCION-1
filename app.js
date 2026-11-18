@@ -49,6 +49,7 @@ function syncPayload(){
  return clone;
 }
 function save(){
+ if(window.HMSSupabasePilot?.onLocalSave)window.HMSSupabasePilot.onLocalSave(state);
  try{db.set(state)}catch(e){console.error('No se pudo guardar en localStorage',e);alert('AVISO: almacenamiento del navegador lleno o bloqueado. Exporta una copia JSON ahora. No cierres esta ventana hasta proteger tus datos.')}
  if(window.MHSOffline){
   MHSOffline.saveState(state).catch(()=>{});
@@ -415,6 +416,7 @@ function importData(){
   if(!confirm('Se ha iniciado una descarga de seguridad de los datos actuales.\n\nLa importación AÑADIRÁ registros nuevos sin borrar los actuales. Los registros con el mismo ID se conservarán tal como están.\n\n'+counts.join('\n')+'\n\n¿Continuar?'))return;
   try{db.set(merged)}catch(e){alert('No se ha podido guardar la importación. Puede faltar espacio en el dispositivo. Los datos originales siguen en la sesión actual.');return}
   state=merged;
+  if(window.HMSSupabasePilot?.onLocalSave)window.HMSSupabasePilot.onLocalSave(state);
   MHSOffline?.saveState(state).catch(e=>console.warn('Copia IndexedDB no disponible',e));
   MHSOffline?.enqueue('state_snapshot',syncPayload(),{dedupeKey:'state-main'}).catch(()=>{});
   toast('Datos añadidos sin sustituir los existentes');renderDashboard();
@@ -695,7 +697,7 @@ window.MHSApp={
   state=combined;
   if(window.MHSOffline)await MHSOffline.saveState(state).catch(()=>{});
   renderDashboard();
-  if(source==='cloudflare')toast('Datos actualizados desde Cloudflare');
+  if(source==='supabase')toast('Datos recibidos desde Supabase');
   return true;
  }
 };
