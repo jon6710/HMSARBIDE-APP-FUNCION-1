@@ -53,3 +53,34 @@ body{overflow-x:hidden}.app-shell{display:grid;grid-template-columns:238px minma
 .furn-item .auto-measure-table{min-width:710px}
 
 .furn-photo-label{display:block;font-size:12px;margin-top:8px;color:#28583e;font-weight:700}.furn-photo-label input{display:block;margin-top:4px;font-weight:400}.furn-delete-photo{margin-top:8px}.furn-item .auto-measure-table{min-width:800px}.furn-item [data-furn="price"]{min-width:95px}
+
+/* DEFECTO 1 — Acceso aislado del área de trabajo. No modifica los módulos. */
+body.hms-auth-required .app-shell { display: none !important; }
+body.hms-auth-required { min-height: 100vh; }
+.hms-auth-panel, .hms-recovery {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  overflow-y: auto;
+  background: #f5f7f6;
+}
+.hms-auth-panel[hidden], .hms-recovery[hidden] { display: none !important; }
+.hms-login-card {
+  width: min(100%, 440px);
+  padding: clamp(22px, 5vw, 34px);
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.hms-login-card h1, .hms-login-card h2 { color: var(--green); margin: 0 0 12px; }
+.hms-login-card p { line-height: 1.5; }
+.hms-login-card label { display: block; font-weight: 700; margin: 15px 0 0; }
+.hms-login-card input { display: block; width: 100%; min-height: 44px; padding: 10px; margin: 7px 0 0; border: 1px solid #bfd0c5; border-radius: 9px; }
+.hms-login-card .btn { width: 100%; margin-top: 12px; }
+.hms-login-card [role=status] { color: var(--muted); overflow-wrap: anywhere; }
+@media print { .hms-auth-panel, .hms-recovery { display: none !important; } }

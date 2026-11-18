@@ -589,7 +589,7 @@ function initUI(){
  <button id="hss-login" type="button" class="btn">Iniciar sesión</button>
  <button id="hss-forgot" type="button" class="btn secondary">Recuperar contraseña</button>
  <p id="hss-status" role="status" aria-live="polite"></p></div>`;
- document.body.append(panel);authPanel=panel;
+ document.body.append(panel);authPanel=panel;showLogin();
  const $=id=>panel.querySelector('#'+id);authStatus=$('hss-status');
  $('hss-login').onclick=async()=>{
   const btn=$('hss-login');btn.disabled=true;
