@@ -159,10 +159,10 @@ function decodeVersion(row){
 }
 // V6: contrastar dos lecturas independientes. Si una omite una fila, se bloquea
 // la publicación y se informa del ID exacto; nunca se considera nube compatible.
-async function fetchPaged(makeQuery,label,orderColumn='created_at'){
+async function fetchPaged(makeQuery,label,orderField='created_at'){
  const rows=[];let page=0;
  while(true){
-  const {data,error}=await makeQuery().order(orderColumn,{ascending:true}).range(page*500,(page+1)*500-1);
+  const {data,error}=await makeQuery().order(orderField,{ascending:true}).range(page*500,(page+1)*500-1);
   if(error)throw Error('Fallo al leer '+label+': '+error.message);
   rows.push(...(data||[]));
   if(!data||data.length<500)break;
@@ -265,6 +265,14 @@ async function publish(){
   }
   if(!navigator.onLine)throw Error('Sin Internet; se conserva la copia pendiente.');
   const payload={version:toSend.id,parent:head,state:toSend.state,createdAt:new Date().toISOString()};
+  // Sin un bucket verificado no publicar referencias a blobs locales que otros equipos no pueden abrir.
+  const missingAttachments=[];
+  for(const sheet of payload.state.services||[]){
+   for(const attachment of sheet.attachments||[]){
+    if(attachment.blobId&&!attachment.remotePath&&!attachment.url)missingAttachments.push(attachment.name||attachment.id||'archivo');
+   }
+  }
+  if(missingAttachments.length)throw Error('Hay '+missingAttachments.length+' archivos solo locales. Sin Supabase Storage comprobado no se publicara una copia incompleta.');
   if(JSON.stringify(payload).length>3500000)throw Error('La copia supera el tamaño de prueba (3,5 MB); exporta JSON y revisa fotografías antes de sincronizar.');
   const {error}=await sdk().from('app_data').insert({user_id:sessionUser.id,data_type:NS,record_id:toSend.id,data:payload});
   if(error)throw error;
@@ -474,6 +482,7 @@ function mergeLegacyIntoCurrent(legacy){
 async function integrateLegacy(){
  if(legacyLoaded)return;
  // No marcar como «integrado» si la lectura de RLS falla.
+ await window.MHSApp?.ready;
  const legacy=await fetchLegacy();legacyCache=legacy;
  const result=mergeLegacyIntoCurrent(legacy);
  if(result.changed){
@@ -525,6 +534,7 @@ async function automaticSync(){
  if(!auto||autoBusy||working||recoveryGranted||!navigator.onLine)return;
  autoBusy=true;
  try{
+  await window.MHSApp?.ready;
   await captureJob;
   if(!sessionUser){if(!await who()){showLogin();return;}}
   const all=await versions(),ends=heads(all);

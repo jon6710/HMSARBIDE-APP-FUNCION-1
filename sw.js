@@ -1,15 +1,15 @@
-const CACHE='hmsarbide-trabajo-github-supabase-v3-legado';
+const CACHE='hmsarbide-v54-15-supabase-revision-20261118-b';
 const ASSETS=[
   './','./index.html','./styles.css','./app.js','./offline-sync.js','./manifest.json',
-  './piloto-documentos.js', './supabase-sync.js', './approved-backgrounds/AUTOCLAVE_HOJA_SERVICIO_APROBADA.png', './approved-backgrounds/AUTOCLAVE_ALBARAN_APROBADO.png', './approved-backgrounds/AUTOCLAVE_FACTURA_APROBADA.png', './approved-backgrounds/MOBILIARIO_HOJA_SERVICIO_REFERENCIA.png', './approved-backgrounds/MOBILIARIO_ALBARAN_REFERENCIA.png', './approved-backgrounds/MOBILIARIO_FACTURA_REFERENCIA.png', './icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'
+  './piloto-documentos.js','./supabase-sync.js', './approved-backgrounds/AUTOCLAVE_HOJA_SERVICIO_APROBADA.png', './approved-backgrounds/AUTOCLAVE_ALBARAN_APROBADO.png', './approved-backgrounds/AUTOCLAVE_FACTURA_APROBADA.png', './approved-backgrounds/MOBILIARIO_HOJA_SERVICIO_REFERENCIA.png', './approved-backgrounds/MOBILIARIO_ALBARAN_REFERENCIA.png', './approved-backgrounds/MOBILIARIO_FACTURA_REFERENCIA.png','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'
 ];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('hmsarbide-prepublicacion-')||k.startsWith('hmsarbide-trabajo-github-'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('mhs-v54-')||k.startsWith('hmsarbide-v54-'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET') return;
   if(e.request.mode==='navigate'){
     e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r;}).catch(()=>caches.match('./index.html')));
     return;
   }
-  e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));}return r;}).catch(()=>caches.match(e.request)));
+  e.respondWith(fetch(e.request).then(r=>{if(r.ok&&new URL(e.request.url).origin===self.location.origin){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));}return r;}).catch(()=>caches.match(e.request)));
 });

@@ -1,0 +1,26 @@
+HMSARBIDE — revisión V54.15, 18/11/2026
+
+Base: V54.15 del usuario. Se conservan sin modificaciones los 6 PDF aprobados y los 6 fondos gráficos.
+
+Cambios revisados:
+- Autenticación con el proyecto Supabase existente (sin Cloudflare activo).
+- Lectura de service_sheets ordenada por updated_at (no created_at).
+- Recuperación del estado IndexedDB antes de comenzar la sincronización.
+- Recuperación de registros antiguos app_data y service_sheets, con parada ante formatos no reconocidos.
+- El servicio web intenta cargar el código actualizado de la red antes de recurrir a caché.
+- Si hay adjuntos que solo existen como blobs locales, no se publica una copia que aparente contenerlos.
+
+VERIFICACIONES REALIZADAS:
+1. node --check de los archivos JS: correcto.
+2. Prueba automatizada simulada de lectura de clientes, empresa y hoja antigua: correcta.
+3. Comprobación SHA256 de los seis PDF y seis fondos respecto a V54.15: idénticos.
+4. ZIP: integridad comprobada.
+
+NO VERIFICADO / PENDIENTE:
+- Inicio y flujo completo en navegador: el navegador del entorno bloquea las pruebas de red locales.
+- Acceso real a Supabase, permisos/RLS y formatos completos de sus registros.
+- Transferencia de adjuntos solo locales a Supabase Storage: no hay bucket ni permisos confirmados.
+- Concurrencia de escritura desde dispositivos diferentes y comportamiento sin conexión real.
+
+Esta entrega NO es una versión de producción certificada. No sustituir la copia antigua ni eliminar datos.
+Nunca cargar los backups JSON con clientes a un repositorio publico de GitHub.

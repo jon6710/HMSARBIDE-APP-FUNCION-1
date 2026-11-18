@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#0f7a49">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="HMSARBIDE">
+  <meta name="apple-mobile-web-app-title" content="Mis Hojas">
   <meta name="description" content="HMSARBIDE · Gestión de servicios">
-  <title>HMSARBIDE · TRABAJO</title>
+  <title>HMSARBIDE · Gestión de servicios</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="stylesheet" href="styles.css">
@@ -29,7 +29,7 @@
         <button class="side-link" data-area="facturacion">€ <span>Facturación</span></button>
         <button class="side-link" data-area="presupuestos">🧾 <span>Presupuestos</span></button>
         <button class="side-link" data-area="documentos">▱ <span>Documentos</span></button>
-        <button class="side-link" id="btnDocsPilot" type="button">📄 <span>Plantillas A4 de prueba</span></button>
+        <button class="side-link" id="btnDocsPilot" type="button">📄 <span>Plantillas A4</span></button>
         <button class="side-link" id="btnClients">👥 <span>Clientes</span></button>
         <button class="side-link" id="btnProducts">🧴 <span>Productos</span></button>
         <button class="side-link" id="btnSettings">⚙ <span>Empresa / copias</span></button>
@@ -49,7 +49,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="installHelp" class="install-help no-print" hidden>
     <div class="install-help-card">
-      <strong>Instalar HMSARBIDE</strong>
+      <strong>Instalar Mis Hojas de Servicio</strong>
       <p id="installHelpText">Puedes instalar esta aplicación desde el menú del navegador.</p>
       <button class="btn" id="closeInstallHelp" type="button">Entendido</button>
     </div>
@@ -60,6 +60,7 @@
   <script src="piloto-documentos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="supabase-sync.js"></script>
+
   <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))}</script>
 
   <script>

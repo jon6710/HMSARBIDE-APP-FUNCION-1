@@ -1,9 +1,9 @@
 (()=>{
 'use strict';
-const DB_NAME='hmsarbide_offline_trabajo_github_20261117';
+const DB_NAME='mhs_offline_v54_ensayos';
 const DB_VERSION=2;
 const Q='queue', B='blobs', S='state';
-const CFG_KEY='hmsarbide_cloudflare_github_20261117_config';
+const CFG_KEY='mhs_cloudflare_v54_ensayos_config';
 let dbp;
 const listeners=new Set();
 let syncing=false;
@@ -53,93 +53,14 @@ async function loadState(){const s=await tx(S);const rec=await req(s.get('main')
 async function deleteBlob(id){if(!id)return;const s=await tx(B,'readwrite');return req(s.delete(id));}
 async function setStatus(id,status,lastError=''){const s=await tx(Q,'readwrite');const item=await req(s.get(id));if(!item)return;item.status=status;item.lastError=lastError;item.updatedAt=new Date().toISOString();if(status==='pending')item.tries=(item.tries||0)+1;await req(s.put(item));}
 async function deleteQueue(id){const s=await tx(Q,'readwrite');await req(s.delete(id));notify();}
-function getConfig(){
-  try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')}catch{return {}}
-}
-function configure({endpoint='',token=''}={}){
-  endpoint=String(endpoint||'').trim().replace(/\/+$/,'');
-  token=String(token||'').trim();
-  if(endpoint&&!/^https:\/\//i.test(endpoint))throw new Error('La URL debe empezar por https://');
-  localStorage.setItem(CFG_KEY,JSON.stringify({endpoint,token}));
-  notify();
-  // Solo se sincroniza cuando el usuario lo solicita explícitamente.
-}
-function clearConfig(){localStorage.removeItem(CFG_KEY);notify();}
-function endpoint(){return (getConfig().endpoint||'').trim();}
-function token(){return (getConfig().token||'').trim();}
-function authHeaders(extra={}){const t=token();return {...extra,...(t?{Authorization:`Bearer ${t}`}:{})};}
-function fileToDataURL(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(r.error);r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});}
-async function hydratePhotos(remote,files){
-  if(!remote||!Array.isArray(remote.services)||!Array.isArray(files))return remote;
-  const ep=endpoint();
-  const photos=files.filter(f=>f.kind==='photo');
-  for(const f of photos){
-    const svc=remote.services.find(s=>s.id===f.serviceId);if(!svc)continue;
-    svc.photos=svc.photos||{};
-    try{
-      const resp=await fetch(`${ep}/file/${encodeURIComponent(f.id)}`,{headers:authHeaders()});
-      if(!resp.ok)continue;
-      const blob=await resp.blob();
-      svc.photos[f.refKey]=await fileToDataURL(blob);
-    }catch{}
-  }
-  const atts=files.filter(f=>f.kind==='attachment');
-  for(const f of atts){
-    const svc=remote.services.find(s=>s.id===f.serviceId);if(!svc)continue;
-    svc.attachments=svc.attachments||[];
-    let a=svc.attachments.find(x=>x.id===f.refKey);
-    if(!a){a={id:f.refKey,name:f.fileName||'Documento',type:f.contentType||'application/octet-stream',size:f.size||0,createdAt:f.createdAt,syncStatus:'synced',remoteFileId:f.id};svc.attachments.push(a)}
-    else{a.syncStatus='synced';a.remoteFileId=f.id;a.localOnly=false;}
-  }
-  return remote;
-}
-async function pullRemote(){
-  const ep=endpoint();if(!ep||!token()||!navigator.onLine)return {updated:false,reason:'not-ready'};
-  const resp=await fetch(`${ep}/snapshot`,{headers:authHeaders({'Accept':'application/json'})});
-  if(resp.status===404)return {updated:false,reason:'empty'};
-  if(!resp.ok)throw new Error('Descarga nube HTTP '+resp.status);
-  const data=await resp.json();
-  if(!data?.state||!Array.isArray(data.state.services))return {updated:false,reason:'empty'};
-  const remote=await hydratePhotos(data.state,data.files||[]);
-  if(window.MHSApp?.applyRemoteState){
-    await window.MHSApp.applyRemoteState(remote,{source:'cloudflare',updatedAt:data.updatedAt||''});
-    return {updated:true};
-  }
-  await saveState(remote);
-  return {updated:true,reloadRecommended:true};
-}
-async function syncNow(){
-  if(syncing||!navigator.onLine)return {synced:0,pending:await pendingCount(),reason:!navigator.onLine?'offline':'busy'};
-  const ep=endpoint();
-  if(!ep||!token()){notify();return {synced:0,pending:await pendingCount(),reason:'no-endpoint'};}
-  syncing=true;notify();let synced=0;let pulled=false;
-  try{
-    const items=(await listQueue()).filter(x=>x.status==='pending').sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
-    for(const item of items){
-      try{
-        const fd=new FormData();fd.append('kind',item.kind);fd.append('payload',JSON.stringify(item.payload||{}));fd.append('queueId',item.id);
-        if(item.blobId){const rec=await getBlob(item.blobId);if(rec?.blob)fd.append('file',rec.blob,rec.meta?.name||'archivo');}
-        const resp=await fetch(`${ep}/sync`,{method:'POST',body:fd,headers:authHeaders({'X-MHS-Offline-Queue':'1'})});
-        if(!resp.ok){const txt=await resp.text().catch(()=>String(resp.status));throw new Error(`HTTP ${resp.status} ${txt.slice(0,100)}`);}
-        await deleteQueue(item.id);if(item.blobId)await deleteBlob(item.blobId);synced++;
-      }catch(e){await setStatus(item.id,'pending',String(e?.message||e));break;}
-    }
-    try{const r=await pullRemote();pulled=!!r.updated;}catch(e){console.warn('No se pudo descargar estado remoto',e);}
-  }finally{syncing=false;notify();}
-  return {synced,pulled,pending:await pendingCount(),reason:'done'};
-}
-async function testConnection(){
-  const ep=endpoint();if(!ep||!token())throw new Error('Falta URL o token');
-  const r=await fetch(`${ep}/health`,{headers:authHeaders()});
-  if(!r.ok)throw new Error('HTTP '+r.status);
-  return r.json();
-}
-async function getStatus(){const c=getConfig();return {online:navigator.onLine,pending:await pendingCount(),syncing,configured:!!(c.endpoint&&c.token),endpoint:c.endpoint||''};}
-function onStatus(fn){listeners.add(fn);getStatus().then(fn);return()=>listeners.delete(fn);}
-async function notify(){const st=await getStatus();listeners.forEach(fn=>{try{fn(st)}catch{}});}
-window.addEventListener('online',()=>{notify();});
-window.addEventListener('offline',notify);
-// Sin sincronización periódica hasta verificar el servidor remoto.
-openDB().then(notify).catch(()=>{});
-window.MHSOffline={enqueue,storeBlob,getBlob,saveState,loadState,listQueue,pendingCount,syncNow,pullRemote,testConnection,getStatus,onStatus,endpoint,getConfig,configure,clearConfig};
+// Esta capa solo conserva datos y adjuntos en IndexedDB; Supabase controla la red.
+async function syncNow(){return {synced:0,pending:await pendingCount(),reason:'supabase-managed'};}
+async function pullRemote(){return {updated:false,reason:'supabase-managed'};}
+async function getStatus(){return {online:navigator.onLine,pending:await pendingCount(),syncing:false,configured:false};}
+function onStatus(fn){getStatus().then(fn);return ()=>{};}
+function getConfig(){return {};}
+function configure(){throw new Error('Cloudflare no se utiliza. Accede con Supabase.');}
+function clearConfig(){}
+async function testConnection(){throw new Error('El servidor de datos es Supabase.');}
+window.MHSOffline={enqueue,storeBlob,getBlob,saveState,loadState,listQueue,pendingCount,syncNow,pullRemote,testConnection,getStatus,onStatus,getConfig,configure,clearConfig};
 })();
