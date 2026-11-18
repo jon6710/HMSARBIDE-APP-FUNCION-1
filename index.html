@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="HMSARBIDE">
-  <meta name="description" content="HMSARBIDE · Trabajo local">
+  <meta name="description" content="HMSARBIDE · Gestión de servicios">
   <title>HMSARBIDE · TRABAJO</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -35,14 +35,14 @@
         <button class="side-link" id="btnSettings">⚙ <span>Empresa / copias</span></button>
         <button class="side-link" id="btnExit">↪ <span>Salir</span></button>
       </nav>
-      <div class="side-foot"><strong>Trabajo · LOCAL</strong><small>Empresa · Sello · Firma · Offline</small></div>
+      
     </aside>
     <section class="workspace">
       <header class="topbar no-print">
         <div><strong>HMSARBIDE</strong><small>Servicios, documentación, facturación y certificados</small></div>
-        <div class="topactions"><button class="sync-status" id="syncStatusBtn" type="button" aria-label="Estado de sincronización"><span id="syncDot">●</span><span id="syncText">Preparando offline…</span></button><button class="btn ghost install-app-btn" id="installAppBtn" type="button" hidden>Instalar app</button><span class="pilot-chip">HMSARBIDE · GITHUB + SUPABASE</span></div>
+        <div class="topactions"><button class="btn ghost install-app-btn" id="installAppBtn" type="button" hidden>Instalar app</button></div>
       </header>
-      <div class="pilot-warning no-print">CONEXIÓN: GitHub publica la aplicación y Supabase gestiona la nube. Pulsa «Supabase · conectar» para iniciar sesión y comprobar los datos existentes. Nunca importes una copia JSON ni publiques datos sin antes comprobar la nube y guardar un respaldo.</div>
+      
       <main id="app"></main>
     </section>
   </div>
@@ -60,26 +60,6 @@
   <script src="piloto-documentos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="supabase-sync.js"></script>
-  <script>
-  (function(){
-    const btn=document.getElementById('syncStatusBtn'),dot=document.getElementById('syncDot'),status=document.getElementById('syncText');
-    if(!btn)return;
-    if(dot)dot.textContent='○';
-    if(status)status.textContent='Supabase · conectar';
-    btn.addEventListener('click',()=>document.getElementById('hms-supabase-open')?.click());
-    window.addEventListener('hms-sync-status',e=>{
-      const kind=e.detail?.name;
-      if(kind==='sesion'||kind==='actualizado'||kind==='publicado'){
-        if(dot)dot.textContent='●';if(status)status.textContent='Supabase · '+(kind==='sesion'?'sesión iniciada':kind==='publicado'?'copia publicada':'copia recibida');
-      } else if(kind==='conflicto'||kind==='error'){
-        if(dot)dot.textContent='!';if(status)status.textContent='Supabase · revisar';
-      } else if(kind==='sin-sesion'){
-        if(dot)dot.textContent='○';if(status)status.textContent='Supabase · conectar';
-      }
-    });
-  })();
-  </script>
-
   <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))}</script>
 
   <script>
@@ -109,9 +89,7 @@
   })();
   </script>
 
-  <script>
-  // Sin sincronización remota automática: activación manual por el usuario.
-  </script>
+
 
 </body>
 </html>

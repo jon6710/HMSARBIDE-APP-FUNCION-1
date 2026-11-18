@@ -382,79 +382,253 @@ async function resolveLocalConflict(){
   return {message:'La tablet ha adoptado la versión de Supabase. Punto de recuperación local conservado. Comprueba nube sin cambios.'};
  }finally{working=false;}
 }
-async function autoTick(){
- if(!auto||working||!navigator.onLine)return;
- try{
-  const check=await inspect();
-  if(check.heads>1){auto=false;event('conflicto',{message:check.status});return;}
-  if(check.draft){
-   if(check.remote?.version===(check.localHead||null)||(!check.remote&&!check.localHead))await publish();
-   else{auto=false;event('conflicto',{message:check.status});}
-  }else if(check.remote&&check.localHead&&check.remote.version!==check.localHead){
-   // Solo descarga automáticamente si el usuario ya vinculó este dispositivo, no hay borradores
-   // y está en Inicio; nunca interrumpir un formulario o pantalla de documentos.
-   const dashboard=!!document.querySelector('#app .hero-dashboard');
-   if(dashboard)await adopt();
-   else event('descarga-pendiente',{message:'Hay cambios en la nube. Ve a Inicio para recibirlos sin interrumpir el formulario.'});
-  }
- }catch(e){event('error',{message:e.message});}
+// Lectura de datos LEGADOS del proyecto original, separada de las versiones nuevas.
+// Solo SELECT bajo las políticas RLS de Supabase. Nunca escribe ni elimina esas filas.
+const LEGACY_TYPES={clients:'clients',products:'products',invoices:'invoices',budgets:'budgets'};
+let legacyLoaded=false, legacyCache=null;
+function parseJSONField(value){
+ if(typeof value==='string'){try{return JSON.parse(value)}catch{throw Error('Hay un registro antiguo con JSON ilegible; no se sincroniza para evitar pérdidas.')}}
+ return value;
 }
-function enableAuto(value){auto=!!value;event(auto?'automatico':'manual');if(auto)autoTick();}
-function initUI(){
- const top=document.querySelector('.topactions');if(!top)return;
- const b=document.createElement('button');b.id='hms-supabase-open';b.className='btn secondary';b.type='button';b.textContent='Supabase · conectar';top.prepend(b);
- const panel=document.createElement('div');panel.hidden=true;panel.className='panel no-print';panel.style.cssText='position:fixed;z-index:9999;top:70px;right:12px;max-width:460px;width:calc(100vw - 24px);max-height:85vh;overflow:auto;box-shadow:0 12px 40px #0003;padding:18px;background:#fff';
- panel.innerHTML=`<h3>Sincronización Supabase · HMSARBIDE</h3><p>Conecta con el proyecto Supabase original. Guarda versiones nuevas sin cambiar las filas antiguas. Antes de escribir, consulta y verifica el historial.</p><label>Correo del usuario Supabase<input id="hss-email" type="email" autocomplete="username" style="width:100%"></label><label>Contraseña<input id="hss-password" type="password" autocomplete="current-password" style="width:100%"></label><div class="cert-actions"><button class="btn" id="hss-login">Entrar</button><button class="btn secondary" id="hss-logout">Salir de Supabase</button><button class="btn secondary" id="hss-close">Cerrar</button></div><p id="hss-status" style="white-space:pre-wrap;line-height:1.5">Sin comprobar.</p><button class="btn secondary" type="button" id="hss-forgot">Recuperar contraseña</button><div class="cert-actions"><button class="btn secondary" id="hss-inspect">Comprobar nube (sin cambios)</button><button class="btn" id="hss-publish">Enviar versión a Supabase</button><button class="btn secondary" id="hss-adopt">Recibir versión de Supabase</button><button class="btn secondary" type="button" id="hss-resolve">Conflicto: no modificar</button></div><p><label><input type="checkbox" id="hss-auto"> Envío automático de cambios tras activar la prueba</label></p><small>Ante cambios simultáneos se detiene. Comprueba primero los datos existentes y conserva una copia JSON. Las fotos y adjuntos requieren una prueba separada.</small>`;
- document.body.append(panel);
- // Pantalla de recuperación visible únicamente tras un enlace válido de Supabase.
- // Nunca guarda ni muestra la contraseña fuera de los inputs.
- const rec=document.createElement('section');
- rec.className='panel no-print';rec.hidden=true;
- rec.setAttribute('role','dialog');rec.setAttribute('aria-label','Restablecer contraseña de Supabase');
- rec.style.cssText='position:fixed;z-index:10010;top:8vh;left:50%;transform:translateX(-50%);max-width:520px;width:calc(100vw - 28px);max-height:85vh;overflow:auto;box-shadow:0 10px 60px #0006;padding:22px;background:#fff;border:2px solid #16835b;border-radius:12px';
- rec.innerHTML=`<h3>HMSARBIDE · Recuperar acceso</h3><p>Solo cambia la contraseña de Supabase. No afecta a clientes, hojas ni documentos.</p><p id="hss-rec-message" role="status" style="white-space:pre-wrap"></p><div id="hss-rec-fields" hidden><label>Contraseña nueva (mínimo 12 caracteres)<input id="hss-rec-new" type="password" autocomplete="new-password" minlength="12" style="width:100%"></label><label>Repetir contraseña nueva<input id="hss-rec-confirm" type="password" autocomplete="new-password" minlength="12" style="width:100%"></label><button id="hss-rec-submit" class="btn" type="button">Guardar contraseña nueva</button></div><p><button id="hss-rec-close" class="btn secondary" type="button">Cerrar</button></p>`;
- document.body.append(rec);
- const recGet=id=>rec.querySelector('#'+id);
- recoveryUI={panel:rec,area:recGet('hss-rec-fields'),status:recGet('hss-rec-message')};
- recGet('hss-rec-close').onclick=()=>{rec.hidden=true};
- recGet('hss-rec-submit').onclick=async()=>{
-  const b=recGet('hss-rec-submit');b.disabled=true;
-  try{
-   await finishRecovery(recGet('hss-rec-new').value,recGet('hss-rec-confirm').value);
-   recGet('hss-rec-new').value='';recGet('hss-rec-confirm').value='';
-   recGet('hss-rec-fields').hidden=true;
-  }catch(e){recGet('hss-rec-message').textContent='No se ha podido cambiar: '+e.message}
-  finally{b.disabled=false;}
- };
- if(recoveryReturnError){
-  recoveryNotice='El enlace de recuperación no es válido o ha caducado. Abre el panel Supabase · conectar y solicita un enlace nuevo desde «Recuperar contraseña». No uses el correo antiguo.';
-  displayRecovery();
-  // El fragmento ya se ha retirado antes de inicializar el SDK.
+function arrayFromLegacy(value,kind,recordId){
+ value=parseJSONField(value);
+ if(value==null)return [];
+ if(Array.isArray(value))return value;
+ if(typeof value==='object'){
+  for(const k of [kind,'items','records','value','data'])if(Array.isArray(value[k]))return value[k];
+  if(value.id||value.name||value.number)return [value];
+  if(Object.keys(value).length===0)return [];
  }
- // Inicializar SDK para procesar #access_token / #type=recovery al volver del correo.
- try{sdk()}catch(e){recoveryNotice='No se pudo cargar Supabase. Comprueba la conexión y recarga.';displayRecovery();}
- if(recoveryReturn)handleRecoveryReturn();
- else if(recoveryGranted)displayRecovery();
- const $=id=>panel.querySelector('#'+id),note=m=>{$('hss-status').textContent=String(m)};
- b.onclick=()=>{panel.hidden=!panel.hidden};$('hss-close').onclick=()=>panel.hidden=true;
- $('hss-login').onclick=async()=>{try{await login($('hss-email').value.trim(),$('hss-password').value);$('hss-password').value='';note('Sesión iniciada. Pulsa Comprobar nube.')}catch(e){note('ERROR: '+e.message)}};
- $('hss-forgot').onclick=async()=>{
-  const email=$('hss-email').value.trim();
-  if(!email){note('Introduce primero tu correo electrónico en el campo superior.');return;}
-  if(!confirm('Se enviará un enlace para cambiar la contraseña de Supabase. No modifica tus datos. ¿Continuar?'))return;
-  const button=$('hss-forgot');button.disabled=true;
-  try{note(await sendRecovery(email))}catch(e){note('No se pudo solicitar el enlace: '+e.message)}
-  finally{button.disabled=false}
- };
- $('hss-logout').onclick=async()=>{try{await logout();note('Sesión cerrada.')}catch(e){note(e.message)}};
- $('hss-inspect').onclick=async()=>{try{const r=await inspect();note(r.status+'\nVersiones de pruebas válidas: '+r.count+' · Pendientes locales: '+(r.draft?'sí':'no')+' · ID local reconocido: '+(r.localHead?String(r.localHead).slice(0,8)+'…':'ninguno'))}catch(e){note('ERROR: '+e.message)}};
- $('hss-publish').onclick=async()=>{try{const r=await inspect();note(r.status);if(!confirm('ATENCIÓN: se añadirá una nueva versión en Supabase, sin borrar la antigua. ¿Has exportado el JSON y comprobado que se trata de la cuenta correcta?'))return;const out=await publish();note(out.message)}catch(e){note('BLOQUEADO: '+e.message)}};
- $('hss-adopt').onclick=async()=>{try{const r=await inspect();note(r.status);if(!confirm('¿Recibir la copia de Supabase? Solo está permitido si no hay cambios locales en conflicto.'))return;const out=await adopt();note(out.message)}catch(e){note('BLOQUEADO: '+e.message)}};
- $('hss-resolve').onclick=()=>note('No se resuelven conflictos automáticamente. Guarda JSON y conserva ambos estados para revisión.');
- $('hss-auto').onchange=()=>{if($('hss-auto').checked&&!confirm('Activar sincronización periódica para este dispositivo. Se detendrá ante conflictos. ¿Confirmas?')){$('hss-auto').checked=false;return;}enableAuto($('hss-auto').checked)};
- window.addEventListener('hms-sync-status',e=>{if(['error','conflicto','descarga-pendiente'].includes(e.detail.name)){note(e.detail.message||e.detail.status||e.detail.name);if(e.detail.name==='conflicto')$('hss-auto').checked=false;}});
+ throw Error('No reconozco el formato antiguo de '+kind+' ('+recordId+'). No se enviarán cambios hasta revisarlo.');
 }
-window.addEventListener('online',()=>autoTick());timer=setInterval(autoTick,30000);
-window.HMSSupabasePilot={onLocalSave,login,logout,inspect,publish,adopt,enableAuto,who,sendRecovery};
+function legacySheet(value,row){
+ value=parseJSONField(value);
+ if(value&&typeof value==='object'&&value.sheet)value=value.sheet;
+ if(!value||typeof value!=='object'||Array.isArray(value)||!value.type)
+  throw Error('Formato de hoja antigua desconocido ('+row.id+'); sincronización detenida para protegerla.');
+ const sheet={...value,id:value.id||String(row.id)};
+ if(!sheet.updatedAt)sheet.updatedAt=row.updated_at||sheet.modified||sheet.createdAt||'1970-01-01T00:00:00Z';
+ if(!sheet.client||typeof sheet.client!=='object')sheet.client={};
+ // El editor actual usa "madera" donde el editor anterior usaba "insitu".
+ if(sheet.type==='insitu'){
+  sheet.type='madera';
+  const d=sheet.data||{};sheet.data={...d,woodTreatment:Array.isArray(d.treat)?d.treat.join(' + '):(d.woodTreatment||''),woodArea:d.area||d.woodArea||'',woodObs:d.observations||d.woodObs||''};
+ }
+ if(!['madera','ddd','autoclave','mobiliario','termitas'].includes(sheet.type))
+  throw Error('Tipo de hoja antigua no reconocido ('+sheet.type+'). No se descarta.');
+ return sheet;
+}
+async function fetchLegacy(){
+ if(!sessionUser)throw Error('Sesión no disponible para recuperar los datos antiguos.');
+ const result={services:[],clients:[],products:[],invoices:[],budgets:[],company:{}};
+ // Consultar TODAS las páginas: no interpretar errores o RLS como «cero registros».
+ const old=await fetchPaged(()=>sdk().from('app_data')
+  .select('record_id,data_type,data,created_at,user_id').eq('user_id',sessionUser.id),'app_data antigua');
+ for(const row of old){
+  const kind=LEGACY_TYPES[row.data_type];
+  if(kind){
+   const values=arrayFromLegacy(row.data,kind,row.record_id);
+   for(const obj of values){
+    if(!obj||typeof obj!=='object')throw Error('Registro de '+kind+' inválido en Supabase.');
+    const item={...obj};
+    if(!item.id)item.id=String(row.record_id)+(values.length===1?'':'_'+result[kind].length);
+    if(!item.updatedAt)item.updatedAt=row.created_at||'1970-01-01T00:00:00Z';
+    result[kind].push(item);
+   }
+  }
+  if(row.data_type==='config'||row.data_type==='company'){
+   const raw=parseJSONField(row.data);
+   if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
+    const co=raw.company&&typeof raw.company==='object'?raw.company:raw;
+    // No convertir claves técnicas o ajustes en campos de empresa.
+    for(const key of ['name','commercialName','taxId','address','postalCode','province','phone','email','registration','directorName','directorSurname','logo','directorSignature']){
+     if(co[key]!==undefined&&co[key]!==null&&co[key]!=='')result.company[key]=co[key];
+    }
+   }
+  }
+ }
+ const sheets=await fetchPaged(()=>sdk().from('service_sheets')
+  .select('id,user_id,data,updated_at').eq('user_id',sessionUser.id),'service_sheets antigua');
+ for(const row of sheets)result.services.push(legacySheet(row.data,row));
+ return result;
+}
+function mergeLegacyIntoCurrent(legacy){
+ const original=snapshot();
+ if(!original)throw Error('No se puede leer el estado de HMSARBIDE.');
+ const merged={...original};let additions=0;
+ for(const kind of ['clients','products','invoices','budgets','services']){
+  const current=Array.isArray(original[kind])?original[kind]:[];
+  const byId=new Map(current.filter(x=>x?.id).map(x=>[String(x.id),x]));
+  for(const x of legacy[kind]){
+   const key=String(x.id),exists=byId.get(key);
+   if(!exists){byId.set(key,x);additions++;}
+   // La versión normalizada de sincronización tiene prioridad para IDs ya presentes.
+  }
+  merged[kind]=[...byId.values()];
+ }
+ const co={...legacy.company,...(original.company||{})};
+ for(const [k,v] of Object.entries(legacy.company))if(merged.company?.[k]==null||merged.company[k]==='')co[k]=v;
+ merged.company=co;
+ return {merged,additions,changed:!sameState(original,merged)};
+}
+async function integrateLegacy(){
+ if(legacyLoaded)return;
+ // No marcar como «integrado» si la lectura de RLS falla.
+ const legacy=await fetchLegacy();legacyCache=legacy;
+ const result=mergeLegacyIntoCurrent(legacy);
+ if(result.changed){
+  suppressed=true;
+  try{if(await window.MHSApp?.applyRemoteState?.(result.merged,{source:'supabase'})!==true)
+   throw Error('No se han podido integrar los registros antiguos en el almacenamiento del dispositivo.');}
+  finally{suppressed=false;}
+  const current=await get('draft');
+  const base=current?.base??await get('head')??null;
+  await set('draft',{id:uid(),base,state:snapshot(),updatedAt:new Date().toISOString()});
+ }
+ legacyLoaded=true;
+ event('legado',{services:legacy.services.length,clients:legacy.clients.length,products:legacy.products.length});
+}
+// Sincronización automática: sesión persistente y un único historial por usuario.
+// Los estados nuevos se mezclan por ID, sin sobrescribir las tablas antiguas.
+let authPanel=null,authStatus=null,autoBusy=false,lastError='',bootstrapDone=false;
+const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+function showStatus(message,problem=false){
+ lastError=problem?String(message):'';
+ event(problem?'error':'automatico',{message});
+ if(authStatus)authStatus.textContent=message;
+ const indicator=document.getElementById('hms-sync-indicator');
+ if(indicator){indicator.textContent=problem?'⚠ Sincronización pendiente':(sessionUser?'● Conectado':'● Sin conectar');indicator.title=message;}
+}
+function showLogin(message=''){
+ if(authPanel)authPanel.hidden=false;
+ document.body.classList.add('hms-auth-required');
+ if(message)showStatus(message,true);
+}
+function hideLogin(){if(authPanel)authPanel.hidden=true;document.body.classList.remove('hms-auth-required');}
+async function adoptMerged(remote){
+ // applyRemoteState une por ID y devuelve true tras persistir los datos.
+ // La versión remota puede coexistir con nuevos registros locales que aún no se han enviado.
+ suppressed=true;
+ try{
+  const ok=await window.MHSApp?.applyRemoteState?.(remote.state,{source:'supabase'});
+  if(ok!==true)throw Error('No se pudieron guardar los datos recibidos de Supabase.');
+  await set('head',remote.version);
+ }finally{suppressed=false;}
+ const merged=snapshot();
+ if(!sameState(merged,remote.state)){
+  await set('draft',{id:uid(),base:remote.version,state:merged,updatedAt:new Date().toISOString()});
+ }else{
+  await set('draft',null);
+ }
+}
+async function automaticSync(){
+ if(!auto||autoBusy||working||recoveryGranted||!navigator.onLine)return;
+ autoBusy=true;
+ try{
+  await captureJob;
+  if(!sessionUser){if(!await who()){showLogin();return;}}
+  const all=await versions(),ends=heads(all);
+  if(ends.length>1)throw Error('Hay versiones simultáneas en Supabase. Se han detenido los envíos para evitar pérdidas.');
+  if(await get('unverifiedPublish'))throw Error('Una publicación anterior necesita verificación. No se volverá a enviar automáticamente.');
+  const remote=ends[0]||null;
+  const known=await get('head');
+  let pending=await get('draft');
+  if(remote){
+   if(known!==remote.version || (pending&&pending.base!==remote.version)){
+    // Nunca se descartan datos de un dispositivo: se combinan antes de publicar.
+    await adoptMerged(remote);
+    pending=await get('draft');
+   }else if(!pending && !sameState(snapshot(),remote.state)){
+    // Detectar cambios locales sin registrar realizados antes de cargar el módulo.
+    await set('draft',{id:uid(),base:remote.version,state:snapshot(),updatedAt:new Date().toISOString()});
+    pending=await get('draft');
+   }
+  }else{
+   if(known)throw Error('El historial remoto que conocía este dispositivo no está disponible. No se enviarán datos.');
+   if(!pending && !isEmpty(snapshot())){
+    await set('draft',{id:uid(),base:null,state:snapshot(),updatedAt:new Date().toISOString()});
+    pending=await get('draft');
+   }
+  }
+  await integrateLegacy();
+  pending=await get('draft');
+  if(pending){
+   // publish() comprueba la cabeza y verifica el registro tras insertarlo.
+   await publish();
+  }
+  bootstrapDone=true;
+  hideLogin();
+  showStatus('Conectado a Supabase. Los cambios se sincronizan automáticamente.');
+ }catch(e){
+  showStatus(e?.message||String(e),true);
+  if(!bootstrapDone)showLogin();
+ }finally{autoBusy=false;}
+}
+function requestSync(){if(auto)void automaticSync();}
+function onAuthenticated(){auto=true;bootstrapDone=false;showLogin();showStatus('Recuperando tus datos de Supabase…');requestSync();}
+function initUI(){
+ const indicator=document.createElement('button');
+ indicator.id='hms-sync-indicator';indicator.type='button';indicator.className='hms-connection';
+ indicator.textContent='● Conectando…';indicator.title='Estado de conexión';
+ document.querySelector('.topactions')?.prepend(indicator);
+ const panel=document.createElement('section');panel.id='hms-auth';panel.setAttribute('role','dialog');
+ panel.setAttribute('aria-label','Acceso a HMSARBIDE');panel.className='hms-auth-panel';
+ panel.innerHTML=`<div class="hms-login-card"><h1>HMSARBIDE</h1><p>Accede para trabajar con tus datos de Supabase.</p>
+ <label>Correo electrónico<input id="hss-email" type="email" autocomplete="username" inputmode="email"></label>
+ <label>Contraseña<input id="hss-password" type="password" autocomplete="current-password"></label>
+ <button id="hss-login" type="button" class="btn">Iniciar sesión</button>
+ <button id="hss-forgot" type="button" class="btn secondary">Recuperar contraseña</button>
+ <p id="hss-status" role="status" aria-live="polite"></p></div>`;
+ document.body.append(panel);authPanel=panel;
+ const $=id=>panel.querySelector('#'+id);authStatus=$('hss-status');
+ $('hss-login').onclick=async()=>{
+  const btn=$('hss-login');btn.disabled=true;
+  try{await login($('hss-email').value.trim(),$('hss-password').value);$('hss-password').value='';onAuthenticated();}
+  catch(e){showLogin('No se pudo iniciar sesión: '+e.message);}finally{btn.disabled=false;}
+ };
+ $('hss-password').addEventListener('keydown',e=>{if(e.key==='Enter')$('hss-login').click();});
+ $('hss-forgot').onclick=async()=>{
+  try{authStatus.textContent=await sendRecovery($('hss-email').value.trim());}
+  catch(e){authStatus.textContent=e.message;}
+ };
+ indicator.onclick=()=>{
+  if(lastError)alert('Sincronización pendiente: '+lastError+'\nLos datos locales se conservan.');
+  else if(!sessionUser)showLogin();
+  else if(confirm('¿Quieres cerrar tu sesión de HMSARBIDE en este dispositivo?')){
+   void logout().then(()=>showLogin('Sesión cerrada.')).catch(e=>showStatus(e.message,true));
+  }
+ };
+ const rec=document.createElement('section');rec.className='hms-recovery';rec.hidden=true;
+ rec.setAttribute('role','dialog');rec.setAttribute('aria-label','Restablecer contraseña');
+ rec.innerHTML=`<div class="hms-login-card"><h2>Recuperar contraseña</h2><p id="hss-rec-message" role="status"></p>
+ <div id="hss-rec-fields" hidden><label>Contraseña nueva (mínimo 12 caracteres)<input id="hss-rec-new" type="password" minlength="12" autocomplete="new-password"></label>
+ <label>Repetir contraseña<input id="hss-rec-confirm" type="password" minlength="12" autocomplete="new-password"></label>
+ <button id="hss-rec-submit" class="btn">Guardar nueva contraseña</button></div>
+ <button id="hss-rec-close" class="btn secondary">Cerrar</button></div>`;
+ document.body.append(rec);
+ const r=id=>rec.querySelector('#'+id);
+ recoveryUI={panel:rec,area:r('hss-rec-fields'),status:r('hss-rec-message')};
+ r('hss-rec-close').onclick=()=>{rec.hidden=true;if(!sessionUser)showLogin();};
+ r('hss-rec-submit').onclick=async()=>{try{await finishRecovery(r('hss-rec-new').value,r('hss-rec-confirm').value);r('hss-rec-new').value='';r('hss-rec-confirm').value='';}catch(e){r('hss-rec-message').textContent=e.message;}};
+ try{sdk();}catch(e){showLogin('No se pudo iniciar Supabase: '+e.message);return;}
+ if(recoveryReturn||recoveryReturnError){
+  if(recoveryReturnError){recoveryNotice='El enlace ha caducado o no es válido. Solicita uno nuevo.';displayRecovery();}
+  if(recoveryReturn)void handleRecoveryReturn();
+ }
+ // SDK puede tardar en restaurar la sesión: no declarar vacío el estado mientras tanto.
+ void (async()=>{
+  try{
+   const user=await who();
+   if(user&&!recoveryReturn&&!recoveryGranted)onAuthenticated();
+   else if(!recoveryReturn)showLogin();
+  }catch(e){showLogin('No se pudo comprobar la cuenta: '+e.message);}
+ })();
+}
+window.addEventListener('online',requestSync);
+window.addEventListener('focus',requestSync);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestSync();});
+window.addEventListener('hms-sync-status',e=>{if(e.detail.name==='pendiente')requestSync();});
+timer=setInterval(requestSync,15000);
+window.HMSSupabasePilot={onLocalSave,login,logout,inspect,publish,adopt,who,sendRecovery,requestSync};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initUI);else initUI();
 })();

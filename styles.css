@@ -53,3 +53,14 @@ body{overflow-x:hidden}.app-shell{display:grid;grid-template-columns:238px minma
 .furn-item .auto-measure-table{min-width:710px}
 
 .furn-photo-label{display:block;font-size:12px;margin-top:8px;color:#28583e;font-weight:700}.furn-photo-label input{display:block;margin-top:4px;font-weight:400}.furn-delete-photo{margin-top:8px}.furn-item .auto-measure-table{min-width:800px}.furn-item [data-furn="price"]{min-width:95px}
+
+/* HMSARBIDE: acceso único y avisos discretos de sincronización */
+.hms-auth-panel,.hms-recovery{position:fixed;inset:0;z-index:20000;background:#f4f7f5;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.hms-auth-panel[hidden],.hms-recovery[hidden]{display:none!important}
+.hms-login-card{width:min(430px,100%);background:white;padding:28px;border-radius:16px;box-shadow:0 8px 35px #152a2020;display:flex;flex-direction:column;gap:15px}
+.hms-login-card h1,.hms-login-card h2{color:#0f7a49;margin:0}
+.hms-login-card label{display:flex;flex-direction:column;gap:6px;font-weight:600}
+.hms-login-card input{width:100%;box-sizing:border-box;padding:11px;border:1px solid #aabdb3;border-radius:8px;font:inherit}
+.hms-login-card p{margin:0;line-height:1.45}
+.hms-connection{background:transparent;border:0;color:#175f45;font:inherit;font-size:12px;cursor:pointer;max-width:215px;text-align:right}
+.hms-auth-required .app-shell{visibility:hidden}

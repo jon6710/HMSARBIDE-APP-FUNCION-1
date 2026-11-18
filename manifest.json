@@ -2,7 +2,7 @@
   "id": "./",
   "name": "HMSARBIDE",
   "short_name": "HMSARBIDE",
-  "description": "Gestión de servicios HMSARBIDE · versión de prepublicación",
+  "description": "Gestión de servicios HMSARBIDE · gestión de clientes y servicios",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

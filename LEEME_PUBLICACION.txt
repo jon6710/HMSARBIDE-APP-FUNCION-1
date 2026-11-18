@@ -1,10 +1,32 @@
-HMSARBIDE — GitHub + Supabase (revisión sobre archivos recibidos)
+HMSARBIDE · revisión de integración automática de datos existentes (18-11-2026)
 
-Antes de publicar: NO subir copias JSON con clientes ni credenciales privadas.
-La conexión al proyecto Supabase se inicia en «Supabase · conectar».
-Esta revisión no ha sido probada con la cuenta real de Supabase.
-IMPORTANTE: el historial hmsarbide_sync_piloto_v1 NO lee ni migra automáticamente
-las filas históricas clients/config/products de app_data ni service_sheets.
-No importar copias ni enviar datos reales sin respaldos y verificación previa.
-Las fotografías y adjuntos guardados en IndexedDB requieren validación independiente.
-El repositorio GitHub y el proyecto Supabase existentes no han sido alterados.
+Repositorio previsto: HMSARBIDE-APP-FUNCION-1 (el EXISTENTE).
+
+QUÉ SE HA CORREGIDO
+- Error de ejecución por referencia a enableAuto inexistente.
+- La pantalla exige iniciar sesión y comprueba Supabase antes de dar acceso.
+- Se leen automáticamente, en modo SOLO LECTURA, los registros del usuario de
+  public.app_data (clients, products, invoices, budgets, config/company) y
+  public.service_sheets, además del historial hmsarbide_sync_piloto_v1.
+- Los registros reconocidos se incorporan al estado local sin eliminar filas
+  antiguas y los cambios se intentan publicar en una nueva versión.
+- Si un formato antiguo no se reconoce, una consulta da error, o se detecta
+  conflicto, SE DETIENE la publicación y se informa del problema.
+- Se mantiene el inicio de sesión, recuperación de contraseña y sincronización
+  periódica cuando la aplicación está abierta y conectada.
+- No aparecen el cartel amarillo, "Trabajo local" ni botones de envío/recepción.
+
+LÍMITES REALES — NO ES UNA VALIDACIÓN EN PRODUCCIÓN
+- NO se ha podido acceder a la cuenta real de Supabase en este entorno. Por
+  tanto NO se ha comprobado que el contenido de cada fila antigua tenga el
+  formato esperado ni que las políticas RLS permitan todas las lecturas.
+- Fotos incorporadas en el estado JSON pueden sincronizarse si no superan el
+  límite de tamaño de la versión; los blobs de adjuntos guardados solo en
+  IndexedDB NO se transfieren automáticamente entre equipos.
+- No se han inventado buckets de Supabase Storage ni credenciales elevadas.
+  Para sincronizar esos adjuntos hace falta un almacenamiento de archivos con
+  permisos RLS/Storage configurados y probar su subida/descarga.
+- No se ha probado extremo a extremo en varios dispositivos ni emisión PDF.
+
+NO subir copias JSON con datos de clientes, contraseñas ni claves privadas a
+un repositorio público. Conservar el ZIP previo y las copias de seguridad.
